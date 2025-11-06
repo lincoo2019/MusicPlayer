@@ -14,6 +14,8 @@ const leftContent = document.querySelector(".leftcontent");
 const lyricsContainer = document.querySelector(".lyricscontainer");
 const rightContent = document.querySelector(".rightcontent");
 const mainDiv = document.querySelector(".main");
+const exportVideoBtn = document.querySelector(".export-video");
+const videoStatus = document.getElementById("videoStatus");
 const processedLines = new Set();
 let needProcess = undefined;
 let width = 1280;
@@ -499,18 +501,18 @@ function GetLyricsLayout(now, to, data) {
 }
 
 function UpdateLyricsLayout(index, data,init = 1) {
-    
+
     for (let i = 0; i < data.length; i++) {
 
         if (i === index && init) {
             data[i].ele.style.color = "rgba(255,255,255,1)"
-            
+
         }else{
             data[i].ele.style.color = "rgba(255,255,255,0.2)"
         }
         data[i].ele.style.filter = `blur(${Math.abs(i - index)}px)`
         const position = GetLyricsLayout(index, i, data);
-        
+
         let n = (i- index)+1
         if (n>10){
             n=0
@@ -519,4 +521,306 @@ function UpdateLyricsLayout(index, data,init = 1) {
             data[i].ele.style.transform = `translateY(${position}px)`;
         },  (n * 70 - n * 10) * init);
     }
+}
+
+// 视频导出功能
+exportVideoBtn.addEventListener("click", async () => {
+    if (!audioLoaded || !audioPlayer.src) {
+        updateVideoStatus("请先选择音频文件", "error");
+        return;
+    }
+
+    if (!lrcLoaded) {
+        updateVideoStatus("请先选择歌词文件", "error");
+        return;
+    }
+
+    try {
+        await exportVideoWithLyrics();
+    } catch (error) {
+        console.error("视频导出失败:", error);
+        updateVideoStatus("导出失败: " + error.message, "error");
+    }
+});
+
+function updateVideoStatus(message, type = "info") {
+    videoStatus.textContent = message;
+    videoStatus.className = "video-status";
+    if (type !== "info") {
+        videoStatus.classList.add(type === "error" ? "export-error" :
+                                   type === "complete" ? "export-complete" : "exporting");
+    }
+}
+
+async function exportVideoWithLyrics() {
+    updateVideoStatus("准备导出视频...", "exporting");
+
+    // 创建canvas和音频上下文
+    const canvas = document.createElement('canvas');
+    canvas.width = 1920;  // 视频宽度
+    canvas.height = 1080; // 视频高度
+    const ctx = canvas.getContext('2d');
+
+    // 创建离屏canvas用于背景
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = canvas.width;
+    bgCanvas.height = canvas.height;
+    const bgCtx = bgCanvas.getContext('2d');
+
+    // 设置视频录制参数
+    const stream = canvas.captureStream(30); // 30fps
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaElementSource(audioPlayer);
+    const destination = audioCtx.createMediaStreamDestination();
+    source.connect(destination);
+    source.connect(audioCtx.destination);
+
+    const audioStream = destination.stream;
+    const combinedStream = new MediaStream([
+        ...stream.getVideoTracks(),
+        ...audioStream.getAudioTracks()
+    ]);
+
+    const mediaRecorder = new MediaRecorder(combinedStream, {
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 5000000 // 5Mbps
+    });
+
+    const chunks = [];
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+            chunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        downloadVideo(url);
+        updateVideoStatus("视频导出完成！", "complete");
+    };
+
+    updateVideoStatus("开始录制...");
+    mediaRecorder.start();
+
+    // 保存原始播放状态
+    const wasPlaying = playing;
+    const originalCurrentTime = audioPlayer.currentTime;
+
+    // 从头开始播放
+    audioPlayer.currentTime = 0;
+    if (!wasPlaying) {
+        audioPlayer.play();
+    }
+
+    // 渲染函数
+    let startTime = Date.now();
+
+    function renderFrame() {
+        const currentTime = (Date.now() - startTime) / 1000;
+
+        // 绘制背景
+        drawBackground(bgCtx, canvas.width, canvas.height, currentTime);
+        ctx.drawImage(bgCanvas, 0, 0);
+
+        // 绘制左侧专辑封面
+        drawAlbumCover(ctx, canvas.width, canvas.height);
+
+        // 绘制歌词
+        drawLyrics(ctx, canvas.width, canvas.height, currentTime);
+
+        // 绘制播放进度条
+        drawProgressBar(ctx, canvas.width, canvas.height, currentTime);
+
+        // 检查是否完成
+        if (currentTime >= audioPlayer.duration) {
+            mediaRecorder.stop();
+            return;
+        }
+
+        requestAnimationFrame(renderFrame);
+    }
+
+    renderFrame();
+}
+
+function drawBackground(ctx, width, height, time) {
+    // 创建渐变背景，使用提取的颜色
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    const colors = [
+        getComputedStyle(document.body).getPropertyValue('--color1') || 'rgba(232, 232, 232, 0.9)',
+        getComputedStyle(document.body).getPropertyValue('--color2') || 'rgba(197, 197, 199, 0.9)',
+        getComputedStyle(document.body).getPropertyValue('--color3') || 'rgba(255, 255, 255, 0.9)'
+    ];
+
+    gradient.addColorStop(0, colors[0]);
+    gradient.addColorStop(0.5, colors[1]);
+    gradient.addColorStop(1, colors[2]);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // 添加动态效果
+    const timeOffset = time * 20; // 动画速度
+    const gradient2 = ctx.createRadialGradient(
+        Math.sin(timeOffset * 0.1) * width * 0.3 + width * 0.5,
+        Math.cos(timeOffset * 0.15) * height * 0.3 + height * 0.5,
+        width * 0.1,
+        width * 0.5,
+        height * 0.5,
+        width * 0.8
+    );
+    gradient2.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+    gradient2.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gradient2;
+    ctx.fillRect(0, 0, width, height);
+}
+
+function drawAlbumCover(ctx, width, height) {
+    const coverSize = Math.min(width, height) * 0.4; // 封面大小
+    const coverX = width * 0.2 - coverSize / 2;
+    const coverY = height * 0.5 - coverSize / 2;
+    const coverRadius = 15; // 圆角半径
+
+    // 绘制阴影
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 10;
+
+    // 绘制圆角矩形封面
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    roundRect(ctx, coverX, coverY, coverSize, coverSize, coverRadius);
+    ctx.fill();
+
+    // 如果有图片，绘制图片
+    if (imageLoaded && bgImg.complete) {
+        ctx.save();
+        ctx.beginPath();
+        roundRect(ctx, coverX, coverY, coverSize, coverSize, coverRadius);
+        ctx.clip();
+        ctx.drawImage(bgImg, coverX, coverY, coverSize, coverSize);
+        ctx.restore();
+    } else {
+        // 绘制默认音符图标
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = `${coverSize * 0.3}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('♪', coverX + coverSize / 2, coverY + coverSize / 2);
+    }
+
+    ctx.shadowColor = 'transparent';
+}
+
+function drawLyrics(ctx, width, height, currentTime) {
+    const lyricsAreaX = width * 0.5;
+    const lyricsAreaWidth = width * 0.45;
+    const lyricsAreaY = height * 0.2;
+    const lyricsAreaHeight = height * 0.6;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = 'bold 48px "SFPro-Semibold", "PingFangSC-Semibold", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    // 找到当前应该显示的歌词
+    let currentLyricIndex = -1;
+    for (let i = lyrics.length - 1; i >= 0; i--) {
+        if (currentTime >= lyrics[i].time) {
+            currentLyricIndex = i;
+            break;
+        }
+    }
+
+    if (currentLyricIndex >= 0) {
+        // 计算歌词位置
+        let yOffset = lyricsAreaHeight / 2;
+
+        // 绘制当前及附近的歌词
+        const startIdx = Math.max(0, currentLyricIndex - 3);
+        const endIdx = Math.min(lyrics.length - 1, currentLyricIndex + 3);
+
+        for (let i = startIdx; i <= endIdx; i++) {
+            const distance = Math.abs(i - currentLyricIndex);
+            const opacity = distance === 0 ? 1 : Math.max(0.1, 0.8 - distance * 0.2);
+            const blur = distance * 2;
+            const scale = distance === 0 ? 1 : Math.max(0.7, 1 - distance * 0.1);
+
+            ctx.save();
+
+            // 设置透明度和模糊效果
+            ctx.globalAlpha = opacity;
+            ctx.filter = `blur(${blur}px)`;
+
+            // 缩放和位置
+            const x = lyricsAreaX + 50;
+            const y = lyricsAreaY + yOffset + (i - currentLyricIndex) * 80;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillText(lyrics[i].text, 0, 0);
+            ctx.restore();
+
+            ctx.restore();
+        }
+    }
+
+    ctx.restore();
+}
+
+function drawProgressBar(ctx, width, height, currentTime) {
+    const barWidth = width * 0.6;
+    const barHeight = 8;
+    const barX = width * 0.2;
+    const barY = height * 0.85;
+
+    // 背景
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    roundRect(ctx, barX, barY, barWidth, barHeight, 4);
+    ctx.fill();
+
+    // 进度
+    const progress = Math.min(1, currentTime / audioPlayer.duration);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    roundRect(ctx, barX, barY, barWidth * progress, barHeight, 4);
+    ctx.fill();
+
+    // 时间显示
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '24px "SFPro-Regular", "PingFangSC-Regular", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const currentTimeStr = formatTime(currentTime);
+    const totalTimeStr = formatTime(audioPlayer.duration);
+    ctx.fillText(`${currentTimeStr} / ${totalTimeStr}`, width / 2, barY + 40);
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+function downloadVideo(url) {
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `${audioName.textContent || 'lyrics_video'}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
 }

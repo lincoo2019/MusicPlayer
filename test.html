@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试视频导出功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .feature-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 8px;
+        }
+        .link-button {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 10px 10px 10px 0;
+            transition: background 0.3s;
+        }
+        .link-button:hover {
+            background: #0056b3;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🎵 滚动歌词视频导出功能测试</h1>
+
+        <h2>📋 已实现的功能</h2>
+        <ul class="feature-list">
+            <li>滚动歌词UI界面（类似Apple Music）</li>
+            <li>音频文件加载和播放</li>
+            <li>LRC歌词文件解析和同步</li>
+            <li>专辑封面显示和背景颜色提取</li>
+            <li>视频导出按钮和状态显示</li>
+            <li>Canvas绘制视频内容（1920x1080分辨率）</li>
+            <li>滚动歌词动画效果</li>
+            <li>专辑封面圆角显示</li>
+            <li>动态渐变背景</li>
+            <li>播放进度条和时间显示</li>
+            <li>MediaRecorder API视频录制</li>
+            <li>音频与视频同步</li>
+            <li>自动下载生成的视频文件</li>
+        </ul>
+
+        <h2>🎬 视频导出特性</h2>
+        <ul class="feature-list">
+            <li>支持WebM格式（VP9视频编码，Opus音频编码）</li>
+            <li>30fps帧率，5Mbps码率</li>
+            <li>完整的音频同步</li>
+            <li>实时Canvas渲染</li>
+            <li>自动文件下载</li>
+        </ul>
+
+        <div class="warning">
+            <strong>⚠️ 注意事项：</strong>
+            <ul>
+                <li>需要HTTPS环境或localhost才能使用MediaRecorder API</li>
+                <li>浏览器需要支持MediaRecorder和WebAudio API</li>
+                <li>建议使用Chrome、Firefox等现代浏览器</li>
+                <li>导出过程可能需要一些时间，请耐心等待</li>
+            </ul>
+        </div>
+
+        <h2>🚀 使用方法</h2>
+        <ol>
+            <li>点击下面的链接打开主应用</li>
+            <li>点击左侧音乐图标选择音频、封面和LRC歌词文件</li>
+            <li>播放音频确认歌词同步正常</li>
+            <li>点击右侧的导出视频按钮（向下箭头图标）</li>
+            <li>等待视频生成完成，会自动下载</li>
+        </ol>
+
+        <a href="/" class="link-button">🎵 打开音乐播放器</a>
+
+        <h2>📁 文件要求</h2>
+        <ul>
+            <li><strong>音频文件：</strong>支持所有HTML5音频格式（MP3、WAV、OGG等）</li>
+            <li><strong>歌词文件：</strong>LRC格式，支持UTF-8、GBK、Big5等编码</li>
+            <li><strong>封面图片：</strong>支持所有HTML5图片格式（JPG、PNG、GIF等）</li>
+        </ul>
+
+        <h2>🔧 技术实现</h2>
+        <p>本功能使用了以下Web API：</p>
+        <ul>
+            <li>Canvas API - 视频内容绘制</li>
+            <li>MediaRecorder API - 视频录制</li>
+            <li>Web Audio API - 音频处理</li>
+            <li>MediaStream API - 音视频流合并</li>
+            <li>File API - 文件读取</li>
+        </ul>
+    </div>
+</body>
+</html>

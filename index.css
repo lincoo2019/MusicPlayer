@@ -151,6 +151,45 @@ p {
     height: 28px;
 }
 
+.controls {
+    gap: 15px;
+}
+
+.export-video {
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.export-video:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+}
+
+.export-video:active {
+    transform: scale(0.95);
+}
+
+.video-status {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #fff;
+    text-align: center;
+    min-height: 20px;
+    text-shadow: 0 0 3px #0009;
+}
+
+.exporting {
+    color: #ffeb3b;
+}
+
+.export-complete {
+    color: #4caf50;
+}
+
+.export-error {
+    color: #f44336;
+}
+
 .controls > .play {
     display: block;
     transition: transform 0.1s ease;
